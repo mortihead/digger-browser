@@ -10,31 +10,22 @@ const dig = new Digger(canvas);
 function resize(): void {
   const scale = Math.max(
     1,
-    Math.floor(Math.min(window.innerWidth / dig.display.width, window.innerHeight / dig.display.height)),
+    Math.floor(Math.min(window.innerWidth / dig.width, window.innerHeight / dig.height)),
   );
-  canvas.style.width = `${dig.display.width * scale}px`;
-  canvas.style.height = `${dig.display.height * scale}px`;
+  canvas.style.width = `${dig.width * scale}px`;
+  canvas.style.height = `${dig.height * scale}px`;
 }
 window.addEventListener("resize", resize);
 resize();
 
-// --- Проверка Этапа 3: статичная отрисовка уровня 1 ---
-// Строим поле из данных уровня, рисуем фон, кромки туннелей и текст.
-// Мешки, изумруды, диггер и монстры появятся на этапе игрового цикла.
+// Привязка клавиатуры: keyDown возвращает true для игровых клавиш — гасим их
+// стандартное поведение (прокрутка стрелками, действия F-клавиш и т.п.).
+window.addEventListener("keydown", (e) => {
+  if (dig.keyDown(e.key)) e.preventDefault();
+});
+window.addEventListener("keyup", (e) => dig.keyUp(e.key));
 
-dig.display.clearScreen();
-dig.display.setIntensity(0);
-dig.drawing.buildField();
-dig.drawing.createAllSprites();
-dig.drawing.drawFieldAndBackground();
-dig.drawing.drawText("DIGGER", 108, 0, 3);
-
-// Временный доступ для отладки (Этап 3).
+// Временный доступ для отладки (Этап 4).
 (globalThis as unknown as { dig: Digger }).dig = dig;
 
-function loop(): void {
-  dig.display.render();
-  requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
+void dig.start();
