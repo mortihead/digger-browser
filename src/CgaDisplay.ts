@@ -9,7 +9,8 @@
  * преобразуется в RGBA и выводится на <canvas> методом {@link render},
  * который дёргает игровой цикл раз в кадр.
  */
-import { CGA_TABLE } from "./CgaGrafx.ts";
+import { CGA_TABLE, CGA_TITLE_DATA } from "./CgaGrafx.ts";
+import { CGA_ASCII_TABLE } from "./Alphabet.ts";
 
 export class CgaDisplay {
   /** Размеры экрана (режим CGA 4: 320×200). */
@@ -129,6 +130,138 @@ export class CgaDisplay {
         if ((mx & (3 << 6)) === 0) pixels[d] = px & 3;
         d += 4;
         if (src === spr.length || src === msk.length) return;
+      }
+      dest += this.width;
+    }
+  }
+
+  /**
+   * Читает прямоугольный блок пикселей экрана в упакованный массив.
+   * Каждый элемент содержит 4 CGA-пикселя (по 2 бита), упакованных MSB-first.
+   *
+   * @param x левый край (выравнивается по границе 4 пикселей)
+   * @param p выходной массив упакованных пикселей
+   * @param w ширина в упакованных единицах (1 единица = 4 пикселя)
+   * @param h высота в строках
+   */
+  readSpritePixels(x: number, y: number, p: number[], w: number, h: number): void {
+    const pixels = this.pixels;
+    let src = 0;
+    let dest = y * this.width + (x & 0xfffc);
+    for (let i = 0; i < h; i++) {
+      let d = dest;
+      for (let j = 0; j < w; j++) {
+        p[src++] =
+          ((((((pixels[d] << 2) | pixels[d + 1]) << 2) | pixels[d + 2]) << 2) | pixels[d + 3]);
+        d += 4;
+        if (src === p.length) return;
+      }
+      dest += this.width;
+    }
+  }
+
+  /** Читает одно упакованное значение (4 пикселя) в заданных координатах. */
+  getPixel(x: number, y: number): number {
+    const pixels = this.pixels;
+    const ofs = this.width * y + (x & 0xfffc);
+    return (((((pixels[ofs] << 2) | pixels[ofs + 1]) << 2) | pixels[ofs + 2]) << 2) | pixels[ofs + 3];
+  }
+
+  /**
+   * Рисует упакованный спрайт без маски прозрачности — перезаписывает все
+   * пиксели целевого прямоугольника. Используется для восстановления фона.
+   */
+  drawSprite(x: number, y: number, p: number[], w: number, h: number): void {
+    const pixels = this.pixels;
+    let src = 0;
+    let dest = y * this.width + (x & 0xfffc);
+    for (let i = 0; i < h; i++) {
+      let d = dest;
+      for (let j = 0; j < w; j++) {
+        let px = p[src++];
+        pixels[d + 3] = px & 3;
+        px >>= 2;
+        pixels[d + 2] = px & 3;
+        px >>= 2;
+        pixels[d + 1] = px & 3;
+        px >>= 2;
+        pixels[d] = px & 3;
+        d += 4;
+        if (src === p.length) return;
+      }
+      dest += this.width;
+    }
+  }
+
+  /**
+   * Декодирует и рисует титульный экран из RLE-сжатых CGA-данных.
+   * Учитывает чересстрочную раскладку памяти CGA (чётные/нечётные банки строк).
+   */
+  drawTitleScreen(): void {
+    const data = CGA_TITLE_DATA;
+    const pixels = this.pixels;
+    let src = 0;
+    let dest = 0;
+    while (true) {
+      if (src >= data.length) break;
+      const b = data[src++];
+      let l: number;
+      let c: number;
+      if (b === 0xfe) {
+        l = data[src++];
+        if (l === 0) l = 256;
+        c = data[src++];
+      } else {
+        l = 1;
+        c = b;
+      }
+      for (let i = 0; i < l; i++) {
+        let px = c;
+        let adst: number;
+        if (dest < 32768) adst = Math.floor(dest / 320) * 640 + (dest % 320);
+        else adst = 320 + Math.floor((dest - 32768) / 320) * 640 + ((dest - 32768) % 320);
+        pixels[adst + 3] = px & 3;
+        px >>= 2;
+        pixels[adst + 2] = px & 3;
+        px >>= 2;
+        pixels[adst + 1] = px & 3;
+        px >>= 2;
+        pixels[adst + 0] = px & 3;
+        dest += 4;
+        if (dest >= 65535) break;
+      }
+      if (dest >= 65535) break;
+    }
+  }
+
+  /**
+   * Рисует один символ из битмап-шрифта CGA. Символы 12×12 пикселей,
+   * берутся из {@link CGA_ASCII_TABLE}.
+   *
+   * @param ch    ASCII-код символа
+   * @param color индекс цвета CGA (0-3)
+   */
+  drawChar(x: number, y: number, ch: number, color: number): void {
+    const pixels = this.pixels;
+    let dest = x + y * this.width;
+    let ofs = 0;
+    const c = color & 3;
+    ch -= 32;
+    if (ch < 0 || ch > 0x5f) return;
+    const chartab = CGA_ASCII_TABLE[ch];
+    if (chartab == null) return;
+    for (let i = 0; i < 12; i++) {
+      let d = dest;
+      for (let j = 0; j < 3; j++) {
+        let px = chartab[ofs++];
+        pixels[d + 3] = px & c;
+        px >>= 2;
+        pixels[d + 2] = px & c;
+        px >>= 2;
+        pixels[d + 1] = px & c;
+        px >>= 2;
+        pixels[d] = px & c;
+        d += 4;
       }
       dest += this.width;
     }

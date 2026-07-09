@@ -1,53 +1,52 @@
-import { CgaDisplay } from "./CgaDisplay.ts";
-
-const canvas = document.getElementById("screen") as HTMLCanvasElement;
-const display = new CgaDisplay(canvas);
+import type { Digger } from "./Digger.ts";
 
 /**
- * Целочисленное масштабирование canvas под размер окна средствами CSS.
- * Внутренний размер буфера остаётся 320×200, браузер растягивает без сглаживания.
+ * Контроллер игрового цикла: титульный экран, переходы уровней, смена игроков.
+ *
+ * Порт org.digger.app.Main. ВНИМАНИЕ: пока портирована только часть, нужная
+ * для отрисовки статичного уровня (данные уровней и геттеры). Полная логика
+ * (титул, переходы, штрафы, жизни) будет добавлена на этапе игрового цикла.
  */
-function resize(): void {
-  const scale = Math.max(
-    1,
-    Math.floor(Math.min(window.innerWidth / display.width, window.innerHeight / display.height)),
-  );
-  canvas.style.width = `${display.width * scale}px`;
-  canvas.style.height = `${display.height * scale}px`;
+export class Main {
+  numPlayers = 0;
+  currentPlayer = 0;
+  penalty = 0;
+
+  /** Раскладки уровней: 8 планов × 10 строк × 15 столбцов. */
+  readonly levelData: string[][] = [
+    ["S   B     HHHHS", "V  CC  C  V B  ", "VB CC  C  V    ", "V  CCB CB V CCC", "V  CC  C  V CCC", "HH CC  C  V CCC", " V    B B V    ", " HHHH     V    ", "C   V     V   C", "CC  HHHHHHH  CC"],
+    ["SHHHHH  B B  HS", " CC  V       V ", " CC  V CCCCC V ", "BCCB V CCCCC V ", "CCCC V       V ", "CCCC V B  HHHH ", " CC  V CC V    ", " BB  VCCCCV CC ", "C    V CC V CC ", "CC   HHHHHH    "],
+    ["SHHHHB B BHHHHS", "CC  V C C V BB ", "C   V C C V CC ", " BB V C C VCCCC", "CCCCV C C VCCCC", "CCCCHHHHHHH CC ", " CC  C V C  CC ", " CC  C V C     ", "C    C V C    C", "CC   C H C   CC"],
+    ["SHBCCCCBCCCCBHS", "CV  CCCCCCC  VC", "CHHH CCCCC HHHC", "C  V  CCC  V  C", "   HHH C HHH   ", "  B  V B V  B  ", "  C  VCCCV  C  ", " CCC HHHHH CCC ", "CCCCC CVC CCCCC", "CCCCC CHC CCCCC"],
+    ["SHHHHHHHHHHHHHS", "VBCCCCBVCCCCCCV", "VCCCCCCV CCBC V", "V CCCC VCCBCCCV", "VCCCCCCV CCCC V", "V CCCC VBCCCCCV", "VCCBCCCV CCCC V", "V CCBC VCCCCCCV", "VCCCCCCVCCCCCCV", "HHHHHHHHHHHHHHH"],
+    ["SHHHHHHHHHHHHHS", "VCBCCV V VCCBCV", "VCCC VBVBV CCCV", "VCCCHH V HHCCCV", "VCC V CVC V CCV", "VCCHH CVC HHCCV", "VC V CCVCC V CV", "VCHHBCCVCCBHHCV", "VCVCCCCVCCCCVCV", "HHHHHHHHHHHHHHH"],
+    ["SHCCCCCVCCCCCHS", " VCBCBCVCBCBCV ", "BVCCCCCVCCCCCVB", "CHHCCCCVCCCCHHC", "CCV CCCVCCC VCC", "CCHHHCCVCCHHHCC", "CCCCV CVC VCCCC", "CCCCHH V HHCCCC", "CCCCCV V VCCCCC", "CCCCCHHHHHCCCCC"],
+    ["HHHHHHHHHHHHHHS", "V CCBCCCCCBCC V", "HHHCCCCBCCCCHHH", "VBV CCCCCCC VBV", "VCHHHCCCCCHHHCV", "VCCBV CCC VBCCV", "VCCCHHHCHHHCCCV", "VCCCC V V CCCCV", "VCCCCCV VCCCCCV", "HHHHHHHHHHHHHHH"],
+  ];
+
+  constructor(_d: Digger) {}
+
+  getCurrentPlayer(): number {
+    return this.currentPlayer;
+  }
+
+  /** Возвращает ASCII-код символа раскладки уровня в ячейке (x, y) плана l. */
+  getLevelChar(x: number, y: number, l: number): number {
+    if (l === 0) l++;
+    return this.levelData[l - 1][y].charCodeAt(x);
+  }
+
+  /** Возвращает номер плана уровня (1-8). Пока зафиксирован на 1 до этапа игрового цикла. */
+  getLevelPlan(): number {
+    return 1;
+  }
+
+  /** Возвращает число жизней игрока. Пока заглушка до этапа игрового цикла. */
+  getLives(_pl: number): number {
+    return 3;
+  }
+
+  incrementPenalty(): void {
+    this.penalty++;
+  }
 }
-window.addEventListener("resize", resize);
-resize();
-
-// --- Временная проверка Этапа 2: отрисовка настоящих спрайтов из данных ---
-// Рисуем диггера в 4 направлениях + анимацию кадров. Будет удалено на этапе игры.
-
-// Индексы в CGA_TABLE (пары спрайт/маска): диггер вправо/вверх/влево/вниз, кадры 1-3.
-const DIGGER_RIGHT = 1;
-const DIGGER_UP = 7;
-const DIGGER_LEFT = 13;
-const DIGGER_DOWN = 19;
-const DIGGER_W = 4; // ширина в упакованных единицах (16 пикселей)
-const DIGGER_H = 15; // высота в строках
-
-let frame = 0;
-
-function drawDemo(): void {
-  display.clearScreen();
-
-  // Кадр анимации 0..2, меняется каждые 8 кадров рендера.
-  const animFrame = Math.floor(frame / 8) % 3;
-
-  display.drawSpriteMasked(40, 40, DIGGER_RIGHT + animFrame, DIGGER_W, DIGGER_H);
-  display.drawSpriteMasked(120, 40, DIGGER_UP + animFrame, DIGGER_W, DIGGER_H);
-  display.drawSpriteMasked(200, 40, DIGGER_LEFT + animFrame, DIGGER_W, DIGGER_H);
-  display.drawSpriteMasked(280, 40, DIGGER_DOWN + animFrame, DIGGER_W, DIGGER_H);
-}
-
-function loop(): void {
-  drawDemo();
-  display.render();
-  frame++;
-  requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
