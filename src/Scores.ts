@@ -95,6 +95,10 @@ export class Scores {
   }
 
   private flashyWait(n: number): Promise<void> {
+    // Выводим буфер на экран: экран ввода инициалов и мигание "GAME OVER"
+    // рисуются в промежутках между flashyWait, а не через newFrame(), поэтому
+    // без render() они оставались бы невидимыми (застывший кадр).
+    this.dig.display.render();
     return new Promise((resolve) => setTimeout(resolve, n * 2));
   }
 

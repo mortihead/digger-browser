@@ -4,6 +4,9 @@
 Работает в браузере на `<canvas>` + Web Audio, без внешних ассетов (вся графика
 и звук зашиты в код / синтезируются).
 
+Поиграть можно тут:
+[mortihead.github.io/digger-browser](https://mortihead.github.io/digger-browser/)
+
 Основан на Java-версии игры: [github.com/mortihead/digger](https://github.com/mortihead/digger).
 
 ## Как запускать (для разработки)
