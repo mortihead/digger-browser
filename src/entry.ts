@@ -18,9 +18,17 @@ function resize(): void {
 window.addEventListener("resize", resize);
 resize();
 
+// Браузеры создают AudioContext приостановленным до жеста пользователя.
+// Возобновляем его при первом нажатии клавиши или клике.
+function resumeAudio(): void {
+  dig.sound.resume();
+}
+window.addEventListener("pointerdown", resumeAudio);
+
 // Привязка клавиатуры: keyDown возвращает true для игровых клавиш — гасим их
 // стандартное поведение (прокрутка стрелками, действия F-клавиш и т.п.).
 window.addEventListener("keydown", (e) => {
+  resumeAudio();
   if (dig.keyDown(e.key)) e.preventDefault();
 });
 window.addEventListener("keyup", (e) => dig.keyUp(e.key));

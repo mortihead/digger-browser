@@ -295,7 +295,7 @@ export class Main {
     this.dig.drawing.saveFieldSnapshot();
     this.dig.monster.eraseMonsters();
     await this.dig.newFrame();
-    if (this.gameData[this.currentPlayer].levelDone) this.dig.sound.soundLevDone();
+    if (this.gameData[this.currentPlayer].levelDone) await this.dig.sound.soundLevDone();
     if (this.dig.countEmeralds() === 0) {
       this.gameData[this.currentPlayer].level++;
       if (this.gameData[this.currentPlayer].level > 1000) this.gameData[this.currentPlayer].level = 1000;
