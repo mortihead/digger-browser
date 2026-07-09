@@ -190,6 +190,11 @@ export class Sound {
     this.engine?.resume();
   }
 
+  /** Приостанавливает аудиоконтекст (при потере фокуса вкладкой). */
+  suspend(): void {
+    this.engine?.suspend();
+  }
+
   initSound(): void {
     this.wavetype = 2;
     this.t0val = 12000;

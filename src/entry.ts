@@ -25,6 +25,13 @@ function resumeAudio(): void {
 }
 window.addEventListener("pointerdown", resumeAudio);
 
+// Пауза при потере фокуса вкладкой: сам игровой цикл встаёт на паузу в Digger,
+// а здесь дополнительно заглушаем звук, чтобы не «висела» нота.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) dig.sound.suspend();
+  else dig.sound.resume();
+});
+
 // Привязка клавиатуры: keyDown возвращает true для игровых клавиш — гасим их
 // стандартное поведение (прокрутка стрелками, действия F-клавиш и т.п.).
 window.addEventListener("keydown", (e) => {
@@ -32,8 +39,5 @@ window.addEventListener("keydown", (e) => {
   if (dig.keyDown(e.key)) e.preventDefault();
 });
 window.addEventListener("keyup", (e) => dig.keyUp(e.key));
-
-// Временный доступ для отладки (Этап 4).
-(globalThis as unknown as { dig: Digger }).dig = dig;
 
 void dig.start();

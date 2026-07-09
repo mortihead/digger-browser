@@ -75,6 +75,11 @@ export class SoundEngine {
     void this.ctx?.resume();
   }
 
+  /** Приостанавливает AudioContext (например, когда вкладка теряет фокус). */
+  suspend(): void {
+    void this.ctx?.suspend();
+  }
+
   updateT0Val(val: number): void {
     this.t0 = val;
     this.applyParams();

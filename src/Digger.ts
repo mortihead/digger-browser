@@ -364,8 +364,23 @@ export class Digger {
       }
       const delay = target - this.display.getCurrentTimeMillis();
       // setTimeout вместо requestAnimationFrame: даёт корректный фиксированный шаг
-      // frametime независимо от частоты монитора и продолжает тикать в фоне.
-      setTimeout(resolve, delay > 0 ? delay : 0);
+      // frametime независимо от частоты монитора.
+      setTimeout(() => {
+        if (document.hidden) {
+          // Вкладка скрыта — ставим игру на паузу: ждём возврата фокуса, чтобы
+          // не гонять цикл на троттлящемся в фоне таймере. При возврате сбрасываем
+          // отсчёт времени, иначе игра рывком «догоняла» бы пропущенные кадры.
+          const onVisible = (): void => {
+            if (document.hidden) return;
+            document.removeEventListener("visibilitychange", onVisible);
+            this.time = this.display.getCurrentTimeMillis();
+            resolve();
+          };
+          document.addEventListener("visibilitychange", onVisible);
+        } else {
+          resolve();
+        }
+      }, delay > 0 ? delay : 0);
     });
   }
 
